@@ -82,7 +82,7 @@
                 <div>
                     <label for="venue-search" class="block text-sm font-medium text-gray-300 mb-1">장소 검색</label>
                     <div class="flex space-x-2">
-                        <input type="text" id="venue-search" value="잠실 주경기장" placeholder="예: 야구장, 농구장, 체육관 등" class="w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <input type="text" id="venue-search" value="잠실 야구장" placeholder="예: 야구장, 농구장, 체육관 등" class="w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                         <button id="map-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold p-2 rounded-lg transition" title="지도에서 위치 보기">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" /></svg>
                         </button>
@@ -154,6 +154,7 @@
         let isDragging = false;
         let previousMousePosition = { x: 0, y: 0 };
         let currentVenueKey = 'stadium';
+        let euler = new THREE.Euler(0, 0, 0, 'YXZ');
 
         // --- SVG 좌석 배치도 데이터 ---
         const seatingMaps = {
@@ -447,6 +448,13 @@
             y = data.y_base + (row * data.y_mult);
 
             targetPosition.set(x, y, z);
+            
+            // BUG FIX: 좌석 변경 시 카메라가 즉시 스테이지를 바라보도록 설정
+            const tempMatrix = new THREE.Matrix4();
+            tempMatrix.lookAt(targetPosition, stageCenter, camera.up);
+            euler.setFromRotationMatrix(tempMatrix);
+            camera.quaternion.setFromEuler(euler);
+
             seatInfo.textContent = `${venueData[currentVenueKey].name} / ${data.name} / ${row}열 / ${seat}번`;
             updateMapSelection();
         }
@@ -471,31 +479,38 @@
             }
         }
 
-        function onMouseDown(e) { isDragging = true; canvasContainer.classList.add('grabbing'); previousMousePosition.x = e.clientX; previousMousePosition.y = e.clientY; }
-        function onMouseUp() { isDragging = false; canvasContainer.classList.remove('grabbing'); }
+        function onMouseDown(e) { 
+            isDragging = true; 
+            canvasContainer.classList.add('grabbing'); 
+            previousMousePosition.x = e.clientX; 
+            previousMousePosition.y = e.clientY; 
+        }
+        function onMouseUp() { 
+            isDragging = false; 
+            canvasContainer.classList.remove('grabbing'); 
+        }
         function onMouseMove(e) {
             if (!isDragging) return;
             const deltaX = e.clientX - previousMousePosition.x;
             const deltaY = e.clientY - previousMousePosition.y;
-            camera.rotation.y -= deltaX * 0.005;
-            camera.rotation.x -= deltaY * 0.005;
-            camera.rotation.x = Math.max(-Math.PI / 1.8, Math.min(Math.PI / 1.8, camera.rotation.x));
+            
+            euler.y -= deltaX * 0.002;
+            euler.x -= deltaY * 0.002;
+            euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+
             previousMousePosition.x = e.clientX;
             previousMousePosition.y = e.clientY;
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            if (camera.position.distanceTo(targetPosition) > 0.1) {
+            if (camera.position.distanceTo(targetPosition) > 0.01) {
                 camera.position.lerp(targetPosition, 0.1);
             }
-            if (!isDragging) {
-                const targetQuaternion = new THREE.Quaternion();
-                const matrix = new THREE.Matrix4();
-                matrix.lookAt(camera.position, stageCenter, camera.up);
-                targetQuaternion.setFromRotationMatrix(matrix);
-                camera.quaternion.slerp(targetQuaternion, 0.08);
-            }
+            
+            // BUG FIX: 매 프레임마다 euler 값을 기준으로 카메라 방향 업데이트
+            camera.quaternion.setFromEuler(euler);
+            
             renderer.render(scene, camera);
         }
 

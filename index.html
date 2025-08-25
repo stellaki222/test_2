@@ -38,6 +38,12 @@
             background-color: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(5px);
         }
+        #vr-canvas-container {
+            width: 100%;
+            height: 80vh;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
         /* 좌석 배치도 SVG 스타일 */
         .seating-map-svg path, .seating-map-svg polygon, .seating-map-svg rect {
             fill: #4b5563; /* gray-600 */
@@ -82,7 +88,7 @@
                 <div>
                     <label for="venue-search" class="block text-sm font-medium text-gray-300 mb-1">장소 검색</label>
                     <div class="flex space-x-2">
-                        <input type="text" id="venue-search" value="잠실 야구장" placeholder="예: 야구장, 농구장, 체육관 등" class="w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <input type="text" id="venue-search" value="롯데콘서트홀" placeholder="예: 롯데콘서트홀, 야구장 등" class="w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                         <button id="map-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold p-2 rounded-lg transition" title="지도에서 위치 보기">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" /></svg>
                         </button>
@@ -93,24 +99,16 @@
                     <select id="section" class="w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"></select>
                 </div>
                 <div>
-                    <label for="row" class="block text-sm font-medium text-gray-300 mb-1">열 (1-30)</label>
-                    <input type="number" id="row" value="15" min="1" max="30" class="w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <label for="row" class="block text-sm font-medium text-gray-300 mb-1">열 (1-15)</label>
+                    <input type="number" id="row" value="8" min="1" max="15" class="w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                 </div>
                 <div>
-                    <label for="seat" class="block text-sm font-medium text-gray-300 mb-1">좌석 번호 (1-50)</label>
-                    <input type="number" id="seat" value="25" min="1" max="50" class="w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <label for="seat" class="block text-sm font-medium text-gray-300 mb-1">좌석 번호 (1-20)</label>
+                    <input type="number" id="seat" value="10" min="1" max="20" class="w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                 </div>
             </div>
              <div id="seat-info" class="mt-4 text-center text-gray-300 bg-gray-700/50 p-3 rounded-lg text-sm">좌석을 선택해주세요.</div>
-            <button id="show-photo-btn" class="w-full mt-4 bg-gradient-to-r from-teal-400 to-blue-500 hover:from-teal-500 hover:to-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">실사 뷰 보기</button>
-            
-            <!-- 행사 목록 섹션 -->
-            <div class="mt-6 pt-4 border-t border-gray-700">
-                <h2 class="text-lg font-semibold text-white mb-3">주요 행사 목록</h2>
-                <div id="event-list" class="space-y-3 max-h-48 overflow-y-auto">
-                    <!-- 이벤트 목록이 동적으로 추가됩니다. -->
-                </div>
-            </div>
+            <button id="show-photo-btn" class="w-full mt-4 bg-gradient-to-r from-teal-400 to-blue-500 hover:from-teal-500 hover:to-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">360° 실사 뷰 보기</button>
         </div>
     </div>
 
@@ -119,9 +117,9 @@
 
     <!-- 실사 뷰 모달 -->
     <div id="photo-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl relative p-4 border border-gray-700">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl relative p-4 border border-gray-700">
             <button id="close-modal-btn" class="absolute -top-3 -right-3 bg-white text-gray-800 rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg">&times;</button>
-            <img id="seat-photo" src="" alt="Seat View Photo" class="w-full h-auto rounded-lg object-contain" style="max-height: 80vh;">
+            <div id="vr-canvas-container"></div>
             <p id="photo-description" class="text-center text-gray-300 mt-2 font-semibold"></p>
         </div>
     </div>
@@ -139,10 +137,12 @@
         const showPhotoBtn = document.getElementById('show-photo-btn');
         const photoModal = document.getElementById('photo-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
-        const seatPhoto = document.getElementById('seat-photo');
+        const vrCanvasContainer = document.getElementById('vr-canvas-container');
         const photoDescription = document.getElementById('photo-description');
         const seatingMapOverviewContainer = document.getElementById('seating-map-overview');
-        const eventListContainer = document.getElementById('event-list');
+        // BUG FIX: eventListContainer 변수 선언이 누락되어 추가했습니다.
+        const eventListContainer = document.querySelector('[data-id="event-list-container"]');
+
 
         // --- Three.js 기본 설정 ---
         let scene, camera, renderer;
@@ -150,24 +150,48 @@
         let targetPosition = new THREE.Vector3();
         let stageCenter = new THREE.Vector3(0, 10, 0);
 
+        // --- 360 VR 뷰 변수 ---
+        let vrScene, vrCamera, vrRenderer, vrAnimationId;
+
         // --- 상태 변수 ---
         let isDragging = false;
         let previousMousePosition = { x: 0, y: 0 };
-        let currentVenueKey = 'stadium';
+        let currentVenueKey = 'lotteConcertHall';
         let euler = new THREE.Euler(0, 0, 0, 'YXZ');
 
         // --- SVG 좌석 배치도 데이터 ---
         const seatingMaps = {
+            lotteConcertHall: `<svg viewBox="0 0 300 300" class="seating-map-svg"><rect data-section="c-block" x="100" y="180" width="100" height="60"></rect><path data-section="p-block" d="M100 245 H200 L220 280 H80 Z"></path><path data-section="l1-block" d="M40 170 L95 175 L90 260 L20 250 Z"></path><path data-section="r1-block" d="M260 170 L205 175 L210 260 L280 250 Z"></path><path data-section="l2-block" d="M20 165 L90 170 L80 80 L0 90 Z"></path><path data-section="r2-block" d="M280 165 L210 170 L220 80 L300 90 Z"></path><circle cx="150" cy="150" r="40" fill="#be185d" style="pointer-events: none;"></circle><text x="150" y="155" font-size="20">STAGE</text></svg>`,
             stadium: `<svg viewBox="0 0 300 300" class="seating-map-svg"><rect x="70" y="50" width="160" height="200" fill="#166534" /><text x="150" y="35">N</text><path data-section="n-stand" d="M80 0 H220 L200 40 H100 Z"></path><text x="150" y="285">S</text><path data-section="s-stand" d="M80 300 H220 L200 260 H100 Z"></path><text x="35" y="150" transform="rotate(-90 35,150)">W</text><path data-section="w-stand" d="M0 80 V220 L40 200 V100 Z"></path><text x="265" y="150" transform="rotate(90 265,150)">E</text><path data-section="e-stand" d="M300 80 V220 L260 200 V100 Z"></path></svg>`,
-            concertHall: `<svg viewBox="0 0 300 250" class="seating-map-svg"><path data-section="floor" d="M75 160 H225 V220 H75 Z"></path><path data-section="box-l" d="M25 100 H70 V220 H25 Z"></path><path data-section="box-r" d="M230 100 H275 V220 H230 Z"></path><text x="150" y="50" font-size="20">STAGE</text></svg>`,
-            theater: `<svg viewBox="0 0 300 250" class="seating-map-svg"><path data-section="level1" d="M50 150 Q150 220 250 150 L260 200 Q150 270 40 200 Z"></path><path data-section="level2" d="M40 100 Q150 160 260 100 L270 140 Q150 200 30 140 Z"></path><path data-section="level3" d="M30 50 Q150 100 270 50 L280 80 Q150 130 20 80 Z"></path><text x="150" y="30" font-size="20">STAGE</text></svg>`,
-            baseball: `<svg viewBox="0 0 300 300" class="seating-map-svg"><polygon data-section="infield-1b" points="150,150 250,150 250,50"></polygon><polygon data-section="infield-3b" points="150,150 50,150 50,50"></polygon><path data-section="outfield" d="M50 50 C 50 -50, 250 -50, 250 50"></path><polygon data-section="premium" points="150,150 180,180 120,180"></polygon><text x="150" y="220" font-size="16">HOME</text></svg>`,
-            basketball: `<svg viewBox="0 0 300 200" class="seating-map-svg"><rect x="100" y="50" width="100" height="100" fill="#d97706" style="pointer-events: none;" /><rect data-section="courtside" x="90" y="155" width="120" height="10"></rect><rect data-section="lower-w" x="80" y="40" width="15" height="120"></rect><rect data-section="lower-e" x="205" y="40" width="15" height="120"></rect><rect data-section="upper-w" x="60" y="20" width="15" height="160"></rect><rect data-section="upper-e" x="225" y="20" width="15" height="160"></rect></svg>`,
-            gymnasium: `<svg viewBox="0 0 300 200" class="seating-map-svg"><rect x="100" y="50" width="100" height="100" fill="#065f46" style="pointer-events: none;" /><rect data-section="floor" x="90" y="155" width="120" height="10"></rect><rect data-section="stand-w" x="40" y="40" width="50" height="120"></rect><rect data-section="stand-e" x="210" y="40" width="50" height="120"></rect></svg>`
         };
 
         // --- 장소별 데이터 ---
         const venueData = {
+            'lotteConcertHall': {
+                name: '롯데콘서트홀',
+                stageCenter: new THREE.Vector3(0, 5, 0),
+                model: [
+                    { type: 'cylinder', args: [25, 25, 2, 64], position: [0, 1, 0], color: 0xbe185d }, // Stage
+                    { type: 'plane', args: [30, 20], position: [-40, 10, 0], rotation: [0, Math.PI/2, -0.2], color: 0x374151 }, // L1
+                    { type: 'plane', args: [30, 20], position: [40, 10, 0], rotation: [0, -Math.PI/2, 0.2], color: 0x374151 }, // R1
+                    { type: 'plane', args: [30, 20], position: [0, 10, -40], rotation: [0.2, 0, 0], color: 0x374151 }, // C
+                    { type: 'plane', args: [30, 20], position: [0, 10, 40], rotation: [-0.2, 0, 0], color: 0x374151 }, // P
+                    { type: 'plane', args: [30, 25], position: [-50, 25, 0], rotation: [0, Math.PI/2, -0.3], color: 0x4b5563 }, // L2
+                    { type: 'plane', args: [30, 25], position: [50, 25, 0], rotation: [0, -Math.PI/2, 0.3], color: 0x4b5563 }, // R2
+                ],
+                sections: {
+                    'c-block': { name: 'C블록', z: -40, y_base: 5, y_mult: 0.8, x_mult: 1.5, photo: '2048x1024/cccccc/000000?text=Sample+360+View' },
+                    'p-block': { name: 'P블록', z: 40, y_base: 8, y_mult: 0.8, x_mult: 1.5, photo: '2048x1024/cccccc/000000?text=Sample+360+View' },
+                    'l1-block': { name: 'L1블록', x: -40, y_base: 5, y_mult: 0.8, z_mult: 1, photo: '2048x1024/cccccc/000000?text=Sample+360+View' },
+                    'r1-block': { name: 'R1블록', x: 40, y_base: 5, y_mult: 0.8, z_mult: 1, photo: '2048x1024/cccccc/000000?text=Sample+360+View' },
+                    'l2-block': { name: 'L2블록', x: -50, y_base: 20, y_mult: 0.8, z_mult: 1, photo: '2048x1024/cccccc/000000?text=Sample+360+View' },
+                    'r2-block': { name: 'R2블록', x: 50, y_base: 20, y_mult: 0.8, z_mult: 1, photo: '2048x1024/cccccc/000000?text=Sample+360+View' },
+                },
+                events: [
+                    { date: '2025-11-20', title: '피아니스트 조성진 리사이틀', type: '클래식' },
+                    { date: '2025-12-25', title: '크리스마스 재즈 콘서트', type: '콘서트' }
+                ]
+            },
             'stadium': {
                 name: '종합 경기장',
                 stageCenter: new THREE.Vector3(0, 10, 0),
@@ -179,114 +203,14 @@
                     { type: 'plane', args: [120, 40], position: [0, 20, 80], rotation: [-0.4, 0, 0], color: 0x374151 }, // S
                 ],
                 sections: {
-                    'w-stand': { name: 'W 스탠드', x: -80, y_base: 5, y_mult: 1, z_mult: 2.5, photo: '600x400/1a202c/ffffff?text=W+Stand+View' },
-                    'e-stand': { name: 'E 스탠드', x: 80, y_base: 5, y_mult: 1, z_mult: 2.5, photo: '600x400/1a202c/ffffff?text=E+Stand+View' },
-                    'n-stand': { name: 'N 스탠드', z: -80, y_base: 5, y_mult: 1, x_mult: 2.5, photo: '600x400/1a202c/ffffff?text=N+Stand+View' },
-                    's-stand': { name: 'S 스탠드', z: 80, y_base: 5, y_mult: 1, x_mult: 2.5, photo: '600x400/1a202c/ffffff?text=S+Stand+View' },
+                    'w-stand': { name: 'W 스탠드', x: -75, y_base: 5, y_mult: 1, z_mult: 2.5, photo: '2048x1024/cccccc/000000?text=Sample+360+View' },
+                    'e-stand': { name: 'E 스탠드', x: 75, y_base: 5, y_mult: 1, z_mult: 2.5, photo: '2048x1024/cccccc/000000?text=Sample+360+View' },
+                    'n-stand': { name: 'N 스탠드', z: -75, y_base: 5, y_mult: 1, x_mult: 2.5, photo: '2048x1024/cccccc/000000?text=Sample+360+View' },
+                    's-stand': { name: 'S 스탠드', z: 75, y_base: 5, y_mult: 1, x_mult: 2.5, photo: '2048x1024/cccccc/000000?text=Sample+360+View' },
                 },
                 events: [
                     { date: '2025-09-15', title: '국가대표 평가전: 대한민국 vs 브라질', type: '스포츠' },
                     { date: '2025-10-02', title: '글로벌 K-POP 페스티벌', type: '콘서트' }
-                ]
-            },
-            'concertHall': {
-                name: '콘서트 홀',
-                stageCenter: new THREE.Vector3(0, 5, 0),
-                model: [
-                    { type: 'box', args: [40, 2, 20], position: [0, 1, 10], color: 0xbe185d },
-                    { type: 'plane', args: [100, 100], position: [0, 25, -40], rotation: [0, 0, 0], color: 0x374151 },
-                    { type: 'plane', args: [100, 50], position: [-50, 25, 10], rotation: [0, Math.PI / 2, 0], color: 0x374151 },
-                    { type: 'plane', args: [100, 50], position: [50, 25, 10], rotation: [0, -Math.PI / 2, 0], color: 0x374151 },
-                ],
-                sections: {
-                    'floor': { name: '플로어', z: 40, z_mult: 1.5, y_base: 2, y_mult: 0.1, x_mult: 1.5, photo: '600x400/1a202c/ffffff?text=Concert+Floor+View' },
-                    'box-l': { name: '박스석 좌', x: -35, z: 50, z_mult: 1, y_base: 15, y_mult: 0.5, x_mult: 0.5, photo: '600x400/1a202c/ffffff?text=Box+Seat+View' },
-                    'box-r': { name: '박스석 우', x: 35, z: 50, z_mult: 1, y_base: 15, y_mult: 0.5, x_mult: 0.5, photo: '600x400/1a202c/ffffff?text=Box+Seat+View' },
-                },
-                events: [
-                    { date: '2025-11-20', title: '피아니스트 조성진 리사이틀', type: '클래식' },
-                    { date: '2025-12-25', title: '크리스마스 재즈 콘서트', type: '콘서트' }
-                ]
-            },
-            'theater': {
-                name: '뮤지컬/극장',
-                stageCenter: new THREE.Vector3(0, 8, 0),
-                model: [
-                    { type: 'box', args: [30, 2, 10], position: [0, 1, 10], color: 0x9f1239 },
-                    { type: 'plane', args: [80, 80], position: [0, 20, -30], rotation: [0, 0, 0], color: 0x4b5563 },
-                    { type: 'plane', args: [80, 40], position: [-40, 20, 10], rotation: [0, Math.PI / 2, 0], color: 0x4b5563 },
-                    { type: 'plane', args: [80, 40], position: [40, 20, 10], rotation: [0, -Math.PI / 2, 0], color: 0x4b5563 },
-                ],
-                sections: {
-                    'level1': { name: '1층', z: 40, z_mult: 1.2, y_base: 2, y_mult: 0.3, x_mult: 1.8, photo: '600x400/1a202c/ffffff?text=Theater+1F+View' },
-                    'level2': { name: '2층', z: 50, z_mult: 1, y_base: 15, y_mult: 0.5, x_mult: 2.0, photo: '600x400/1a202c/ffffff?text=Theater+2F+View' },
-                    'level3': { name: '3층', z: 60, z_mult: 0.8, y_base: 25, y_mult: 0.5, x_mult: 2.2, photo: '600x400/1a202c/ffffff?text=Theater+3F+View' },
-                },
-                events: [
-                    { date: '2025-08-25', title: '뮤지컬 <오페라의 유령>', type: '뮤지컬' },
-                    { date: '2025-09-10', title: '연극 <햄릿>', type: '연극' }
-                ]
-            },
-            'baseball': {
-                name: '야구 경기장',
-                stageCenter: new THREE.Vector3(0, 5, -20),
-                model: [
-                    { type: 'plane', args: [200, 200], position: [0, 0.1, 0], rotation: [-Math.PI/2, 0, 0], color: 0x16a34a }, // Grass
-                    { type: 'shape', shape: [[-45, -45], [0, -90], [45, -45], [0, 0]], position: [0, 0.2, 0], rotation: [-Math.PI/2, 0, 0], color: 0x92400e }, // Infield
-                    { type: 'circle', args: [8, 32], position: [0, 0.3, -60.5], rotation: [-Math.PI/2, 0, 0], color: 0x92400e }, // Mound
-                    { type: 'box', args: [4, 1, 4], position: [42.5, 0.3, -42.5], color: 0xffffff }, // 1B
-                    { type: 'box', args: [4, 1, 4], position: [-42.5, 0.3, -42.5], color: 0xffffff }, // 3B
-                    { type: 'box', args: [4, 1, 4], position: [0, 0.3, -85], rotation: [0, Math.PI/4, 0], color: 0xffffff }, // 2B
-                    { type: 'cylinder', args: [100, 130, 20, 64, 1, true, Math.PI * 0.25, Math.PI * 0.5], position: [0, 10, 0], rotation: [0, Math.PI, 0], color: 0x374151},
-                    { type: 'cylinder', args: [140, 160, 20, 64, 1, true, Math.PI * 0.25, Math.PI * 0.5], position: [0, 30, 0], rotation: [0, Math.PI, 0], color: 0x4b5563},
-                ],
-                 sections: {
-                    'premium': { name: '중앙 프리미엄', r_base: 80, r_mult: 0.5, y_base: 5, y_mult: 0.5, angle_base: 180, angle_mult: 0.5, photo: '600x400/1a202c/ffffff?text=Premium+Seat+View' },
-                    'infield-1b': { name: '1루 내야', r_base: 90, r_mult: 1, y_base: 8, y_mult: 0.5, angle_base: 225, angle_mult: 1.0, photo: '600x400/1a202c/ffffff?text=1B+Infield+View' },
-                    'infield-3b': { name: '3루 내야', r_base: 90, r_mult: 1, y_base: 8, y_mult: 0.5, angle_base: 135, angle_mult: 1.0, photo: '600x400/1a202c/ffffff?text=3B+Infield+View' },
-                    'outfield': { name: '외야', r_base: 150, r_mult: 1, y_base: 10, y_mult: 0.3, angle_base: 180, angle_mult: 1.5, photo: '600x400/1a202c/ffffff?text=Outfield+View' },
-                },
-                events: [
-                    { date: '2025-08-22', title: '프로야구: LG 트윈스 vs 두산 베어스', type: '스포츠' },
-                    { date: '2025-08-23', title: '프로야구: LG 트윈스 vs 두산 베어스', type: '스포츠' }
-                ]
-            },
-            'basketball': {
-                name: '농구 경기장',
-                stageCenter: new THREE.Vector3(0, 5, 0),
-                model: [
-                    { type: 'box', args: [28, 0.5, 15], position: [0, 0.25, 0], color: 0xd97706 }, // Court floor
-                    { type: 'plane', args: [40, 30], position: [-22, 15, 0], rotation: [0, Math.PI/2, -0.4], color: 0x374151 }, // West
-                    { type: 'plane', args: [40, 30], position: [22, 15, 0], rotation: [0, -Math.PI/2, 0.4], color: 0x374151 }, // East
-                    { type: 'plane', args: [60, 30], position: [0, 15, -20], rotation: [0.4, 0, 0], color: 0x4b5563 }, // North
-                    { type: 'plane', args: [60, 30], position: [0, 15, 20], rotation: [-0.4, 0, 0], color: 0x4b5563 }, // South
-                ],
-                sections: {
-                    'courtside': { name: '코트사이드', x: 0, z: 10, y_base: 1, y_mult: 0, x_mult: 1, photo: '600x400/1a202c/ffffff?text=Courtside+View' },
-                    'lower-e': { name: '동측 하단', x: 22, y_base: 5, y_mult: 0.8, z_mult: 1, photo: '600x400/1a202c/ffffff?text=Lower+East+View' },
-                    'lower-w': { name: '서측 하단', x: -22, y_base: 5, y_mult: 0.8, z_mult: 1, photo: '600x400/1a202c/ffffff?text=Lower+West+View' },
-                    'upper-n': { name: '북측 상단', z: -20, y_base: 10, y_mult: 0.8, x_mult: 1.5, photo: '600x400/1a202c/ffffff?text=Upper+North+View' },
-                    'upper-s': { name: '남측 상단', z: 20, y_base: 10, y_mult: 0.8, x_mult: 1.5, photo: '600x400/1a202c/ffffff?text=Upper+South+View' },
-                },
-                events: [
-                    { date: '2025-11-05', title: '프로농구: SK 나이츠 vs KCC 이지스', type: '스포츠' }
-                ]
-            },
-            'gymnasium': {
-                name: '실내 체육관',
-                stageCenter: new THREE.Vector3(0, 5, 0),
-                model: [
-                    { type: 'box', args: [20, 0.5, 30], position: [0, 0.25, 0], color: 0x065f46 }, // Court floor
-                    { type: 'plane', args: [40, 30], position: [-25, 15, 0], rotation: [0, Math.PI/2, -0.6], color: 0x374151 }, // West
-                    { type: 'plane', args: [40, 30], position: [25, 15, 0], rotation: [0, -Math.PI/2, 0.6], color: 0x374151 }, // East
-                ],
-                sections: {
-                    'floor': { name: '플로어', x: 0, z: 20, y_base: 1, y_mult: 0, x_mult: 1, photo: '600x400/1a202c/ffffff?text=Gym+Floor+View' },
-                    'stand-e': { name: '동측 스탠드', x: 25, y_base: 5, y_mult: 0.8, z_mult: 1.2, photo: '600x400/1a202c/ffffff?text=East+Stand+View' },
-                    'stand-w': { name: '서측 스탠드', x: -25, y_base: 5, y_mult: 0.8, z_mult: 1.2, photo: '600x400/1a202c/ffffff?text=West+Stand+View' },
-                },
-                events: [
-                    { date: '2025-10-15', title: '프로배구: 우리카드 vs 대한항공', type: '스포츠' }
                 ]
             }
         };
@@ -319,9 +243,9 @@
             canvasContainer.addEventListener('mousemove', onMouseMove);
             canvasContainer.addEventListener('mouseup', onMouseUp);
             canvasContainer.addEventListener('mouseleave', onMouseUp);
-            showPhotoBtn.addEventListener('click', showPhotoModal);
-            closeModalBtn.addEventListener('click', () => photoModal.classList.add('hidden'));
-            photoModal.addEventListener('click', (e) => { if(e.target === photoModal) photoModal.classList.add('hidden'); });
+            showPhotoBtn.addEventListener('click', showVRModal);
+            closeModalBtn.addEventListener('click', hideVRModal);
+            photoModal.addEventListener('click', (e) => { if(e.target === photoModal) hideVRModal(); });
             
             document.addEventListener('click', (e) => {
                 const path = e.target.closest('.seating-map-svg path, .seating-map-svg polygon, .seating-map-svg rect');
@@ -337,18 +261,8 @@
         
         function handleSearch() {
             const query = venueSearchInput.value.toLowerCase();
-            if (query.includes('야구')) {
-                currentVenueKey = 'baseball';
-            } else if (query.includes('축구') || query.includes('잠실')) {
-                currentVenueKey = 'stadium';
-            } else if (query.includes('농구')) {
-                currentVenueKey = 'basketball';
-            } else if (query.includes('체육관')) {
-                currentVenueKey = 'gymnasium';
-            } else if (query.includes('뮤지컬') || query.includes('극장')) {
-                currentVenueKey = 'theater';
-            } else if (query.includes('콘서트') || query.includes('홀')) {
-                currentVenueKey = 'concertHall';
+            if (query.includes('롯데') || query.includes('콘서트')) {
+                currentVenueKey = 'lotteConcertHall';
             } else {
                 currentVenueKey = 'stadium';
             }
@@ -373,15 +287,6 @@
                 if (objInfo.type === 'box') geometry = new THREE.BoxGeometry(...objInfo.args);
                 if (objInfo.type === 'cylinder') geometry = new THREE.CylinderGeometry(...objInfo.args);
                 if (objInfo.type === 'plane') geometry = new THREE.PlaneGeometry(...objInfo.args);
-                if (objInfo.type === 'circle') geometry = new THREE.CircleGeometry(...objInfo.args);
-                if (objInfo.type === 'shape') {
-                    const shape = new THREE.Shape();
-                    shape.moveTo(objInfo.shape[0][0], objInfo.shape[0][1]);
-                    for(let i = 1; i < objInfo.shape.length; i++) {
-                        shape.lineTo(objInfo.shape[i][0], objInfo.shape[i][1]);
-                    }
-                    geometry = new THREE.ShapeGeometry(shape);
-                }
                 mesh = new THREE.Mesh(geometry, material);
                 mesh.position.set(...objInfo.position);
                 if(objInfo.rotation) mesh.rotation.set(...objInfo.rotation);
@@ -400,6 +305,7 @@
         }
 
         function updateEventList() {
+            if (!eventListContainer) return; // defensive check
             eventListContainer.innerHTML = '';
             const data = venueData[currentVenueKey];
             if (data.events && data.events.length > 0) {
@@ -432,24 +338,14 @@
             const seatCenterOffset = seat - 25.5;
 
             let x, y, z;
-
-            if (data.r_base) {
-                const angleDeg = data.angle_base - (seatCenterOffset * data.angle_mult);
-                const angleRad = (angleDeg * Math.PI) / 180;
-                const radius = data.r_base + (row * data.r_mult);
-                x = radius * Math.sin(angleRad);
-                z = radius * Math.cos(angleRad);
-            } else {
-                x = data.x || 0;
-                z = data.z || 0;
-                if (data.x_mult) x += seatCenterOffset * data.x_mult;
-                if (data.z_mult) z += seatCenterOffset * data.z_mult;
-            }
+            x = data.x || 0;
+            z = data.z || 0;
+            if (data.x_mult) x += seatCenterOffset * data.x_mult;
+            if (data.z_mult) z += seatCenterOffset * data.z_mult;
             y = data.y_base + (row * data.y_mult);
 
             targetPosition.set(x, y, z);
             
-            // BUG FIX: 좌석 변경 시 카메라가 즉시 스테이지를 바라보도록 설정
             const tempMatrix = new THREE.Matrix4();
             tempMatrix.lookAt(targetPosition, stageCenter, camera.up);
             euler.setFromRotationMatrix(tempMatrix);
@@ -469,26 +365,85 @@
             });
         }
 
-        function showPhotoModal() {
+        function showVRModal() {
             const sectionKey = sectionSelect.value;
             const section = venueData[currentVenueKey].sections[sectionKey];
             if (section && section.photo) {
-                seatPhoto.src = `https://placehold.co/${section.photo}`;
-                photoDescription.textContent = `${section.name} 구역 예시 사진`;
+                photoDescription.textContent = `${section.name} 구역 360° 뷰 (샘플 이미지)`;
                 photoModal.classList.remove('hidden');
+                initVR(`https://placehold.co/${section.photo}`);
+            }
+        }
+        
+        function hideVRModal() {
+            photoModal.classList.add('hidden');
+            if (vrAnimationId) {
+                cancelAnimationFrame(vrAnimationId);
+            }
+            if (vrRenderer) {
+                vrRenderer.dispose();
+                vrCanvasContainer.innerHTML = '';
             }
         }
 
-        function onMouseDown(e) { 
-            isDragging = true; 
-            canvasContainer.classList.add('grabbing'); 
-            previousMousePosition.x = e.clientX; 
-            previousMousePosition.y = e.clientY; 
+        function initVR(imageUrl) {
+            vrScene = new THREE.Scene();
+            vrCamera = new THREE.PerspectiveCamera(75, vrCanvasContainer.clientWidth / vrCanvasContainer.clientHeight, 1, 1100);
+            vrRenderer = new THREE.WebGLRenderer({ antialias: true });
+            vrRenderer.setSize(vrCanvasContainer.clientWidth, vrCanvasContainer.clientHeight);
+            vrCanvasContainer.appendChild(vrRenderer.domElement);
+
+            const geometry = new THREE.SphereGeometry(500, 60, 40);
+            geometry.scale(-1, 1, 1); // Sphere 안쪽 면을 보도록 뒤집기
+
+            const texture = new THREE.TextureLoader().load(imageUrl);
+            const material = new THREE.MeshBasicMaterial({ map: texture });
+            const sphere = new THREE.Mesh(geometry, material);
+            vrScene.add(sphere);
+
+            let isVrDragging = false;
+            let previousVrMousePosition = { x: 0, y: 0 };
+            let vrEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+
+            function onVrPointerDown(e) {
+                isVrDragging = true;
+                const pointer = e.touches ? e.touches[0] : e;
+                previousVrMousePosition = { x: pointer.clientX, y: pointer.clientY };
+            }
+            function onVrPointerUp() {
+                isVrDragging = false;
+            }
+            function onVrPointerMove(e) {
+                if (!isVrDragging) return;
+                const pointer = e.touches ? e.touches[0] : e;
+                const deltaX = pointer.clientX - previousVrMousePosition.x;
+                const deltaY = pointer.clientY - previousVrMousePosition.y;
+
+                vrEuler.y -= deltaX * 0.004;
+                vrEuler.x -= deltaY * 0.004;
+                vrEuler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, vrEuler.x));
+                vrCamera.quaternion.setFromEuler(vrEuler);
+
+                previousVrMousePosition = { x: pointer.clientX, y: pointer.clientY };
+            }
+
+            vrCanvasContainer.addEventListener('mousedown', onVrPointerDown);
+            vrCanvasContainer.addEventListener('mousemove', onVrPointerMove);
+            vrCanvasContainer.addEventListener('mouseup', onVrPointerUp);
+            vrCanvasContainer.addEventListener('mouseleave', onVrPointerUp);
+            vrCanvasContainer.addEventListener('touchstart', onVrPointerDown);
+            vrCanvasContainer.addEventListener('touchmove', onVrPointerMove);
+            vrCanvasContainer.addEventListener('touchend', onVrPointerUp);
+
+            function animateVR() {
+                vrAnimationId = requestAnimationFrame(animateVR);
+                vrRenderer.render(vrScene, vrCamera);
+            }
+            animateVR();
         }
-        function onMouseUp() { 
-            isDragging = false; 
-            canvasContainer.classList.remove('grabbing'); 
-        }
+
+        function onMouseDown(e) { isDragging = true; canvasContainer.classList.add('grabbing'); previousMousePosition.x = e.clientX; previousMousePosition.y = e.clientY; }
+        function onMouseUp() { isDragging = false; canvasContainer.classList.remove('grabbing'); }
         function onMouseMove(e) {
             if (!isDragging) return;
             const deltaX = e.clientX - previousMousePosition.x;
@@ -507,10 +462,7 @@
             if (camera.position.distanceTo(targetPosition) > 0.01) {
                 camera.position.lerp(targetPosition, 0.1);
             }
-            
-            // BUG FIX: 매 프레임마다 euler 값을 기준으로 카메라 방향 업데이트
             camera.quaternion.setFromEuler(euler);
-            
             renderer.render(scene, camera);
         }
 
